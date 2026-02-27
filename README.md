@@ -1,103 +1,175 @@
-# RAG Challenge Winner Solution
+# RAG-SDL
 
-**Read more about this project:**
-- Russian: https://habr.com/ru/articles/893356/
-- English: https://abdullin.com/ilya/how-to-build-best-rag/
+企业级 RAG（检索增强生成）系统，专注于财报、研报等复杂 PDF 文档的精准问答。
 
-This repository contains the winning solution for both prize nominations in the RAG Challenge competition. The system achieved state-of-the-art results in answering questions about company annual reports using a combination of:
+## 项目简介
 
-- Custom PDF parsing with Docling
-- Vector search with parent document retrieval
-- LLM reranking for improved context relevance
-- Structured output prompting with chain-of-thought reasoning
-- Query routing for multi-company comparisons
+本项目是一个面向金融场景的企业级 RAG 问答系统，解决海量非结构化文档（PDF、研报、规则文档）的精准检索与问答问题。
 
-## Disclaimer
+### 核心能力
 
-This is competition code - it's scrappy but it works. Some notes before you dive in:
+- **PDF 智能解析**：支持财报、研报等复杂 PDF 文档的结构化提取
+- **混合检索**：结合向量检索与关键词检索，提升召回率
+- **LLM 重排**：使用大模型对检索结果进行语义重排
+- **结构化输出**：生成带引用来源的可验证回答
+- **多模型支持**：支持通义千问、GPT 等多种大模型
 
-- IBM Watson integration won't work (it was competition-specific)
-- The code might have rough edges and weird workarounds
-- No tests, minimal error handling - you've been warned
-- You'll need your own API keys for OpenAI/Gemini
-- GPU helps a lot with PDF parsing (I used 4090)
+## 技术架构
 
-If you're looking for production-ready code, this isn't it. But if you want to explore different RAG techniques and their implementations - check it out!
+```
+┌─────────────────────────────────────────────────────────┐
+│                    RAG Pipeline                         │
+├─────────────────────────────────────────────────────────┤
+│  PDF Parsing → Text Splitting → Embedding → Storage   │
+│         ↓                                              │
+│  Query → Hybrid Search → Rerank → LLM Generate         │
+│         ↓                                              │
+│  Structured Output with Citations                      │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Quick Start
+### 核心模块
 
-Clone and setup:
+1. **PDF 解析 (pdf_parsing.py)**
+   - 使用 MinerU 进行文档结构化解析
+   - 保留表格、图表等重要信息
+
+2. **文本分块 (text_splitter.py)**
+   - 基于页级的重叠切块策略
+   - 确保跨页上下文连续性
+
+3. **混合检索 (retrieval.py)**
+   - FAISS 向量索引 + BM25 关键词索引
+   - Parent Page 回溯检索
+
+4. **重排机制 (reranking.py)**
+   - LLM 语义重排
+   - 向量相似度与模型评分加权
+
+5. **问答生成 (pipeline.py)**
+   - 结构化 Prompt 设计
+   - Chain-of-thought 推理
+
+## 安装部署
+
+### 环境要求
+- Python 3.10+
+- GPU（推荐，用于 PDF 解析加速）
+
+### 安装步骤
+
 ```bash
-git clone https://github.com/IlyaRice/RAG-Challenge-2.git
-cd RAG-Challenge-2
+# 1. 克隆项目
+git clone https://github.com/Ding-god/RAG-sdl.git
+cd RAG-sdl
+
+# 2. 创建虚拟环境
 python -m venv venv
-venv\Scripts\Activate.ps1  # Windows (PowerShell)
-pip install -e . -r requirements.txt
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate   # Windows
+
+# 3. 安装依赖
+pip install -r requirements.txt
+
+# 4. 配置 API Key
+# 编辑相关配置文件添加你的 API Key
 ```
 
-Rename `env` to `.env` and add your API keys.
+### 配置说明
 
-## Test Dataset
+根据需要配置不同的模型：
 
-The repository includes two datasets:
+```python
+# 使用通义千问
+model = "qwen-max"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
-1. A small test set (in `data/test_set/`) with 5 annual reports and questions
-2. The full ERC2 competition dataset (in `data/erc2_set/`) with all competition questions and reports
+# 使用 OpenAI
+model = "gpt-4o"
+base_url = "https://api.openai.com/v1"
+```
 
-Each dataset directory contains its own README with specific setup instructions and available files. You can use either dataset to:
+## 使用方法
 
-- Study example questions, reports, and system outputs
-- Run the pipeline from scratch using provided PDFs
-- Use pre-processed data to skip directly to specific pipeline stages
+### 命令行运行
 
-See the respective README files for detailed dataset contents and setup instructions:
-- `data/test_set/README.md` - For the small test dataset
-- `data/erc2_set/README.md` - For the full competition dataset
-
-## Usage
-
-You can run any part of pipeline by uncommenting the method you want to run in `src/pipeline.py` and executing:
 ```bash
-python .\src\pipeline.py
+# 运行完整 pipeline
+python main.py
+
+# 或使用 Streamlit 界面
+streamlit run app_streamlit.py
 ```
 
-You can also run any pipeline stage using `main.py`, but you need to run it from the directory containing your data:
-```bash
-cd .\data\test_set\
-python ..\..\main.py process-questions --config max_nst_o3m
+### Python API
+
+```python
+from src.pipeline import RAGPipeline
+
+# 初始化 pipeline
+rag = RAGPipeline(config="max_nst_o3m")
+
+# 提问
+question = "公司2024年的营收增长是多少？"
+answer = rag.ask(question)
+print(answer)
 ```
 
-### CLI Commands
+### 可用配置
 
-Get help on available commands:
-```bash
-python main.py --help
+- `max_nst_o3m` - 使用 OpenAI o3-mini 模型的最佳配置
+- `qwen_rerank` - 使用通义千问加检索重排
+- `gemini_thinking` - 使用 Gemini 超长上下文
+
+## 项目结构
+
+```
+RAG-sdl/
+├── src/                     # 核心源码
+│   ├── pdf_parsing.py      # PDF 解析
+│   ├── pdf_mineru.py       # MinerU 解析器
+│   ├── text_splitter.py    # 文本分块
+│   ├── ingestion.py        # 向量入库
+│   ├── retrieval.py        # 检索模块
+│   ├── reranking.py       # 重排模块
+│   ├── pipeline.py         # 完整 pipeline
+│   └── prompts.py          # Prompt 模板
+├── data/                    # 测试数据
+├── docs/                    # 文档
+├── app_streamlit.py         # Web 界面
+└── main.py                  # 入口文件
 ```
 
-Available commands:
-- `download-models` - Download required docling models
-- `parse-pdfs` - Parse PDF reports with parallel processing options
-- `serialize-tables` - Process tables in parsed reports
-- `process-reports` - Run the full pipeline on parsed reports
-- `process-questions` - Process questions using specified config
+## 技术栈
 
-Each command has its own options. For example:
-```bash
-python main.py parse-pdfs --help
-# Shows options like --parallel/--sequential, --chunk-size, --max-workers
+- **语言**: Python
+- **LLM**: 通义千问、OpenAI GPT、Claude、Gemini
+- **向量数据库**: FAISS、Elasticsearch
+- **Embedding**: BGE、DashScope
+- **PDF 解析**: MinerU、Docling
+- **前端**: Streamlit
 
-python main.py process-reports --config ser_tab
-# Process reports with serialized tables config
-```
+## 应用场景
 
-## Some configs
+- 财报问答系统
+- 研报摘要提取
+- 企业知识库问答
+- 合同条款分析
+- 法规文档检索
 
-- `max_nst_o3m` - Best performing config using OpenAI's o3-mini model
-- `ibm_llama70b` - Alternative using IBM's Llama 70B model
-- `gemini_thinking` - Full context answering with using enormous context window of Gemini. It is not RAG, actually
+## 性能优化建议
 
-Check `pipeline.py` for more configs and detils on them.
+1. **GPU 加速**：PDF 解析使用 GPU 可大幅提升速度
+2. **索引优化**：根据文档规模选择合适的向量索引
+3. **缓存策略**：对常见问题使用结果缓存
+4. **批量处理**：批量处理文档提升吞吐量
+
+## 注意事项
+
+1. 需要有效的 API Key 才能运行
+2. PDF 解析对 GPU 内存有要求（推荐 24GB+）
+3. 部分复杂表格可能需要手动处理
 
 ## License
 
-MIT
+MIT License
