@@ -4,7 +4,7 @@ import requests
 import time
 import zipfile
 
-api_key = 'eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiI1NjEwMDg0NyIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2NzEwNTQ4OCwiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiZTUyZTAzMzUtOGVmZi00Mzg5LWIyZDItYmUwOTVhNGIzOTM2IiwiZW1haWwiOiIiLCJleHAiOjE3NjgzMTUwODh9.GubJ6kD23O7kpVTrcCguu44S7jxEJO7ldh4WJ1AQdGb0RX3NgToJiPGQC5qhgTFLtjILG_M-HDt8Py3mOhT0Yw'
+api_key = 'api_key'
 PDF_BASE_URL = 'https://ding-mineru-pdf-2026.oss-cn-beijing.aliyuncs.com/'
 
 def get_task_id(file_name):
@@ -169,3 +169,4 @@ if __name__ == "__main__":
     task_id = get_task_id(file_name)
     print('task_id:',task_id)
     get_result(task_id)
+
